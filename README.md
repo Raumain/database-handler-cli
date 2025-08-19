@@ -15,6 +15,12 @@ This command-line tool allows you to **easily manage a PostgreSQL database** thr
 
 ## 📦 Installation
 
+```bash
+npm i -g database-handler-cli
+```
+
+## 👨‍💻 Development
+
 1. Clone this repository:
 
 ```bash
@@ -88,7 +94,7 @@ dump-DD-MM-YYYY-<timestamp>.sql
 
 ## 🧩 Prerequisites
 
-* Docker
+* Docker (development only)
 * A PostgreSQL database
 * A `.env` file containing one or more connection strings, all named: DATABASE_URL
 * Add a comment above each connection string to name it

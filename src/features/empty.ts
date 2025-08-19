@@ -19,7 +19,7 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 	const tables = await getAllTableNames(db);
 
 	if (tables.length === 0) {
-		console.log("ℹ️ Aucune table trouvée dans le schéma public.");
+		console.log("ℹ️ No tables found in the public schema.");
 		return;
 	}
 
@@ -28,9 +28,9 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 			type: "checkbox",
 			name: "selectedTables",
 			message:
-				"Choisissez les tables à vider (utilisez la barre d'espace pour sélectionner plusieurs tables) :",
+				"Choose tables to truncate (use spacebar to select multiple tables):",
 			choices: [
-				{ name: "Tout sélectionner", value: "all" },
+				{ name: "Select all", value: "all" },
 				...tables.map((t) => ({ name: t, value: t })),
 			],
 		},
@@ -41,24 +41,24 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 		: (selectedTables as Array<string>);
 
 	if (tablesToTruncate.length === 0) {
-		console.log("ℹ️ Aucune table sélectionnée.");
+		console.log("ℹ️ No table selected.");
 		return;
 	}
 
 	const tableList = tablesToTruncate.map((t) => `"${t}"`).join(", ");
 
 	try {
-		console.log("🧨 Vidage des tables en cours (avec CASCADE)...");
+		console.log("🧨 Truncating tables (with CASCADE)...");
 
 		await sql
 			.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`)
 			.execute(db);
 
 		console.log(
-			`✅ Les tables ${tablesToTruncate.join(", ")} ont été vidées avec succès (y compris cycles & FK). \n`,
+			`✅ Tables ${tablesToTruncate.join(", ")} successfully truncated (including cycles & FK). \n`,
 		);
 	} catch (e) {
-		console.error("❌ Erreur lors du TRUNCATE :", e);
+		console.error("❌ Error during TRUNCATE:", e);
 		process.exit(1);
 	}
 }

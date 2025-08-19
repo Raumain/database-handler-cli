@@ -15,10 +15,10 @@ export async function listTablesWithSize(db: Kysely<Record<string, unknown>>) {
     ORDER BY pg_total_relation_size('"' || t.table_name || '"') DESC
   `.execute(db);
 
-	console.log(chalk.bold("\n📊 Tables du schéma public :\n"));
+	console.log(chalk.bold("\n📊 Tables in the public schema:\n"));
 
 	if (result.rows.length === 0) {
-		console.log(chalk.gray("Aucune table trouvée."));
+		console.log(chalk.gray("No tables found."));
 		return;
 	}
 

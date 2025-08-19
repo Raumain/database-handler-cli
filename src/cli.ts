@@ -10,88 +10,88 @@ import { listTablesWithSize } from "./features/list.js";
 import { getDbConnectionsFromEnv } from "./utils/getDbConnections.js";
 
 async function chooseDatabase() {
-	const dbConnections = getDbConnectionsFromEnv();
+  const dbConnections = getDbConnectionsFromEnv();
 
-	if (dbConnections.size === 0) {
-		console.log(
-			"❌ Aucune connexion de base de données trouvée dans le fichier .env.",
-		);
-		process.exit(1);
-	}
+  if (dbConnections.size === 0) {
+    console.log(
+      "❌ No database connection found in the .env file.",
+    );
+    process.exit(1);
+  }
 
-	const { selectedDb } = await inquirer.prompt([
-		{
-			type: "list",
-			name: "selectedDb",
-			message: "Sélectionnez la base de données à utiliser :",
-			choices: Array.from(dbConnections.keys()).map((dbKey) => ({
-				name: dbKey,
-				value: dbKey,
-			})),
-		},
-	]);
+  const { selectedDb } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "selectedDb",
+      message: "Select the database to use:",
+      choices: Array.from(dbConnections.keys()).map((dbKey) => ({
+        name: dbKey,
+        value: dbKey,
+      })),
+    },
+  ]);
 
-	const dbUrl = dbConnections.get(selectedDb);
-	if (!dbUrl) {
-		console.error("❌ Erreur : chaîne de connexion non valide.");
-		process.exit(1);
-	}
+  const dbUrl = dbConnections.get(selectedDb);
+  if (!dbUrl) {
+    console.error("❌ Error: Invalid connection string.");
+    process.exit(1);
+  }
 
-	const db = database(dbUrl);
-	console.log(`✅ Connexion à la base de données : ${selectedDb}`);
-	return { selectedDb, db };
+  const db = database(dbUrl);
+  console.log(`✅ Connected to database: ${selectedDb}`);
+  return { selectedDb, db };
 }
 
 async function main() {
-	let { selectedDb, db } = await chooseDatabase();
+  let { selectedDb, db } = await chooseDatabase();
 
-	while (true) {
-		const { action } = await inquirer.prompt([
-			{
-				type: "list",
-				name: "action",
-				message: "📋 Que veux-tu faire ?",
-				choices: [
-					{ name: "📤 Dumper la base vers un fichier SQL", value: "dump" },
-					{ name: "🧨 Supprimer toutes les tables (DROP)", value: "drop" },
-					{ name: "🧹 Vider les données (TRUNCATE)", value: "truncate" },
-					{ name: "📊 Lister les tables avec leur taille", value: "list" },
-					{ name: "📥 Importer un dump SQL existant", value: "import" },
-					{ name: "🔄 Changer de base de données", value: "changeDb" },
-					{ name: "❌ Quitter", value: "exit" },
-				],
-			},
-		]);
+  while (true) {
+    const { action } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "action",
+        message: "📋 What do you want to do?",
+        choices: [
+          { name: "📤 Dump the database to a SQL file", value: "dump" },
+          { name: "🧨 Drop all tables (DROP)", value: "drop" },
+          { name: "🧹 Truncate all data (TRUNCATE)", value: "truncate" },
+          { name: "📊 List tables with their size", value: "list" },
+          { name: "📥 Import an existing SQL dump", value: "import" },
+          { name: "🔄 Change database", value: "changeDb" },
+          { name: "❌ Exit", value: "exit" },
+        ],
+      },
+    ]);
 
-		try {
-			switch (action) {
-				case "dump":
-					await dump(db, selectedDb);
-					break;
-				case "drop":
-					await dropAllTables(db);
-					break;
-				case "truncate":
-					await truncateTables(db);
-					break;
-				case "list":
-					await listTablesWithSize(db);
-					break;
-				case "import":
-					await importDump(db);
-					break;
-				case "changeDb":
-					console.log("🔑 Choix d'une nouvelle base de données...");
-					({ selectedDb, db } = await chooseDatabase());
-					break;
-				default:
-					process.exit(0);
-			}
-		} catch (err) {
-			console.error("❌ Fatal error:", err);
-			process.exit(1);
-		}
-	}
+    try {
+      switch (action) {
+        case "dump":
+          await dump(db, selectedDb);
+          break;
+        case "drop":
+          await dropAllTables(db);
+          break;
+        case "truncate":
+          await truncateTables(db);
+          break;
+        case "list":
+          await listTablesWithSize(db);
+          break;
+        case "import":
+          await importDump(db);
+          break;
+        case "changeDb":
+          console.log("🔑 Choosing a new database...");
+          ({ selectedDb, db } = await chooseDatabase());
+          break;
+        default:
+          process.exit(0);
+      }
+    } catch (err) {
+      console.error("❌ Fatal error:", err);
+      process.exit(1);
+    }
+  }
 }
 
 main();

@@ -72,7 +72,7 @@ function topologicalSort(
 }
 
 async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
-	console.log(chalk.gray("🧹 Suppression des types personnalisés..."));
+	console.log(chalk.gray("🧹 Removing custom types..."));
 
 	const types = await sql<{ typname: string }>`
       SELECT t.typname
@@ -84,13 +84,13 @@ async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
 
 	console.log(types.rows);
 	for (const type of types.rows) {
-		console.log(`  - ${chalk.cyan(type.typname)} (type personnalisé)`);
+		console.log(`  - ${chalk.cyan(type.typname)} (custom type)`);
 		await sql
 			.raw(`DROP TYPE IF EXISTS public."${type.typname}" CASCADE;`)
 			.execute(db);
 	}
 
-	console.log(chalk.green("✅ Types personnalisés supprimés."));
+	console.log(chalk.green("✅ Custom types removed."));
 }
 
 export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
@@ -100,21 +100,21 @@ export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
 	try {
 		const ordered = topologicalSort(tables, deps);
 
-		console.log("🧹 Suppression des tables dans le bon ordre :");
+		console.log("🧹 Removing tables in the correct order:");
 		console.log(ordered.join(" → "));
 
 		for (const table of ordered) {
 			await sql.raw(`DROP TABLE IF EXISTS "${table}" CASCADE`).execute(db);
-			console.log(chalk.green(`✅ Table "${table}" supprimée`));
+			console.log(chalk.green(`✅ Table "${table}" removed`));
 		}
 
 		console.log(
-			chalk.green("🎉 Toutes les tables ont été supprimées proprement."),
+			chalk.green("🎉 All tables have been properly removed."),
 		);
 	} catch (_e: unknown) {
 		console.warn(
 			chalk.yellow(
-				"⚠️ Détection de cycle : suppression forcée (DROP CASCADE sur toutes)",
+				"⚠️ Cycle detected: forced removal (DROP CASCADE on all)",
 			),
 		);
 
@@ -123,7 +123,7 @@ export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
 
 		console.log(
 			chalk.green(
-				"✅ Toutes les tables ont été supprimées avec CASCADE (ordre ignoré).",
+				"✅ All tables have been removed with CASCADE (order ignored).",
 			),
 		);
 	} finally {

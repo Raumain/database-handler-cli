@@ -35,7 +35,7 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 
 		if (dumps.length === 0) {
 			console.log(
-				chalk.red("❌ Aucun fichier dump trouvé dans le dossier backups."),
+				chalk.red("❌ No dump file found in the backups folder."),
 			);
 			return;
 		}
@@ -44,7 +44,7 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 			{
 				type: "list",
 				name: "selectedDump",
-				message: "Choisissez le fichier dump à importer",
+				message: "Choose the dump file to import",
 				choices: dumps,
 			},
 		]);
@@ -52,7 +52,7 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 		const dumpPath = path.resolve(BACKUPS_DIR, selectedDump);
 		const dump = Bun.file(dumpPath);
 
-		console.log(chalk.gray(`📥 Import du fichier : ${dumpPath}...`));
+		console.log(chalk.gray(`📥 Importing file: ${dumpPath}...`));
 
 		const statements = (await dump.text())
 			.split(/;\s*\n/)
@@ -64,14 +64,14 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 				try {
 					await trx.executeQuery(sql.raw(stmt).compile(trx));
 				} catch (err) {
-					console.error(chalk.red(`❌ Erreur à : ${stmt.slice(0, 80)}...`));
+					console.error(chalk.red(`❌ Error at: ${stmt.slice(0, 80)}...`));
 					throw err;
 				}
 			}
 		});
 
-		console.log(chalk.green("✅ Dump importé avec succès via Kysely."));
+		console.log(chalk.green("✅ Dump successfully imported via Kysely."));
 	} catch (err) {
-		console.error(chalk.red("❌ Import échoué :"), err);
+		console.error(chalk.red("❌ Import failed:"), err);
 	}
 }

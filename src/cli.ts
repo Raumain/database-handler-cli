@@ -1,13 +1,13 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 import inquirer from "inquirer";
-import { database } from "src/database";
-import { dropAllTables } from "src/features/drop";
-import { dump } from "src/features/dump";
-import { truncateTables } from "src/features/empty";
-import { importDump } from "src/features/import";
-import { listTablesWithSize } from "src/features/list";
-import { getDbConnectionsFromEnv } from "src/utils/getDbConnections";
+import { database } from "./database.js";
+import { dropAllTables } from "./features/drop.js";
+import { dump } from "./features/dump.js";
+import { truncateTables } from "./features/empty.js";
+import { importDump } from "./features/import.js";
+import { listTablesWithSize } from "./features/list.js";
+import { getDbConnectionsFromEnv } from "./utils/getDbConnections.js";
 
 // Fonction pour demander à l'utilisateur de choisir une base de données
 async function chooseDatabase() {

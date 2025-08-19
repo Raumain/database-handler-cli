@@ -3,10 +3,9 @@
 		"lib": ["ESNext"],
 		"module": "esnext",
 		"target": "esnext",
-		"moduleResolution": "bundler",
+		"moduleResolution": "node",
 		"moduleDetection": "force",
-		"allowImportingTsExtensions": true,
-		"noEmit": true,
+		"outDir": "dist",
 		"composite": true,
 		"strict": true,
 		"downlevelIteration": true,
@@ -16,5 +15,6 @@
 		"forceConsistentCasingInFileNames": true,
 		"allowJs": true,
 		"baseUrl": "./"
-	}
+	},
+	"include": ["src"]
 }

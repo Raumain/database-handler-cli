@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "bun";
+import { fileURLToPath } from "node:url";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import { type Kysely, sql } from "kysely";

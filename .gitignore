@@ -3,3 +3,4 @@ src/backups/
 
 .env
 bun.lock
+dist/

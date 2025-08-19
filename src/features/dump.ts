@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Kysely, sql } from "kysely";
-import { toCamelCase } from "src/utils/toCamelCase";
+import { toCamelCase } from "../utils/toCamelCase.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,6 +120,7 @@ async function generateInsertSQL(
 	const columns = Object.keys(rows[0]);
 	const values = rows
 		.map((row) => {
+			// @ts-expect-error
 			const valueList = columns.map((col) => escapeLiteral(row[col]));
 			return `(${valueList.join(", ")})`;
 		})

@@ -1,0 +1,174 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { type Kysely, sql } from "kysely";
+import { toCamelCase } from "src/utils/toCamelCase";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getDumpFilePath(dbName: string): string {
+	const now = new Date();
+	const day = String(now.getDate()).padStart(2, "0");
+	const month = String(now.getMonth() + 1).padStart(2, "0"); // les mois commencent à 0
+	const year = now.getFullYear();
+	const timestamp = Date.now();
+
+	const filename = `dump-${day}-${month}-${year}-${timestamp}.sql`;
+
+	return path.resolve(
+		__dirname,
+		"..",
+		"backups",
+		toCamelCase(dbName),
+		filename,
+	);
+}
+
+// Récupère toutes les tables du schéma public
+async function getAllTableNames(
+	db: Kysely<Record<string, unknown>>,
+): Promise<string[]> {
+	const result = await sql<{ table_name: string }>`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_type = 'BASE TABLE'
+      AND table_name NOT LIKE 'kysely%'
+  `.execute(db);
+
+	return result.rows.map((row) => row.table_name);
+}
+
+// Récupère les dépendances de clés étrangères
+async function getForeignKeyDependencies(
+	db: Kysely<Record<string, unknown>>,
+): Promise<Map<string, string[]>> {
+	const result = await sql<{
+		table_name: string; // la table qui dépend d'une autre
+		referenced_table_name: string;
+	}>`
+		SELECT
+			kcu.table_name AS table_name,
+			ccu.table_name AS referenced_table_name
+		FROM
+			information_schema.key_column_usage AS kcu
+		JOIN
+			information_schema.constraint_column_usage AS ccu
+		ON
+			kcu.constraint_name = ccu.constraint_name
+		WHERE
+			kcu.table_schema = 'public'
+		`.execute(db);
+
+	const dependencies = new Map<string, string[]>(); // clé: table, valeur: dépendances
+
+	for (const { table_name, referenced_table_name } of result.rows) {
+		if (!dependencies.has(table_name)) {
+			dependencies.set(table_name, []);
+		}
+		dependencies.get(table_name)?.push(referenced_table_name);
+	}
+
+	return dependencies;
+}
+
+// Trie les tables selon les dépendances de clés étrangères
+async function sortTablesByForeignKeys(
+	tables: string[],
+	db: Kysely<Record<string, unknown>>,
+): Promise<string[]> {
+	const dependencies = await getForeignKeyDependencies(db);
+	const sortedTables: string[] = [];
+	const visited = new Set<string>();
+
+	// Fonction de tri récursif
+	async function visit(table: string) {
+		if (!visited.has(table)) {
+			visited.add(table);
+			const deps = dependencies.get(table) || [];
+			for (const dep of deps) {
+				await visit(dep); // On insère d’abord les dépendances
+			}
+			sortedTables.push(table);
+		}
+	}
+
+	for (const table of tables) {
+		await visit(table);
+	}
+
+	return sortedTables;
+}
+
+// Échappe les valeurs SQL
+function escapeLiteral(value: unknown): string {
+	if (value === null || value === undefined) return "NULL";
+	if (typeof value === "number") return value.toString();
+	if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+	if (value instanceof Date) return `'${value.toISOString()}'`;
+	return `'${(value as string).replace(/'/g, "''")}'`;
+}
+
+// Génère la requête INSERT pour une table
+async function generateInsertSQL(
+	tableName: string,
+	db: Kysely<Record<string, unknown>>,
+): Promise<string | null> {
+	const rows = await db.selectFrom(tableName).selectAll().execute();
+	if (rows.length === 0) return null;
+
+	const columns = Object.keys(rows[0]);
+	const values = rows
+		.map((row) => {
+			const valueList = columns.map((col) => escapeLiteral(row[col]));
+			return `(${valueList.join(", ")})`;
+		})
+		.join(",\n");
+
+	return `-- Dump of table ${tableName}\nINSERT INTO "${tableName}" (${columns
+		.map((c) => `"${c}"`)
+		.join(", ")})\nVALUES\n${values};\n`;
+}
+
+// Script principal
+export async function dump(
+	db: Kysely<Record<string, unknown>>,
+	dbName: string,
+) {
+	const tables = await getAllTableNames(db);
+
+	console.log(`📦 Found ${tables.length} tables to dump.`);
+
+	const sortedTables = await sortTablesByForeignKeys(tables, db);
+
+	const insertStatements: string[] = [];
+
+	for (const table of sortedTables) {
+		try {
+			const sql = await generateInsertSQL(table, db);
+			if (sql) {
+				insertStatements.push(sql);
+				console.log(`✅ Dumped ${table}`);
+			} else {
+				console.log(`⚠️  Skipped empty table ${table}`);
+			}
+		} catch (e) {
+			console.error(`❌ Failed to dump table "${table}":`, e);
+		}
+	}
+
+	const fullSQL = [
+		"-- Disable constraints",
+		"SET session_replication_role = 'replica';",
+		"",
+		...insertStatements,
+		"",
+		"-- Re-enable constraints",
+		"SET session_replication_role = 'origin';",
+	].join("\n");
+
+	const OUTPUT_FILE = getDumpFilePath(dbName);
+	await Bun.write(OUTPUT_FILE, fullSQL);
+
+	console.log(`🎉 Dump SQL generated at ${OUTPUT_FILE}`);
+}

@@ -1,35 +1,35 @@
-# 🛠️ PostgreSQL CLI Tool (avec Kysely + Bun)
+# 🛠️ PostgreSQL CLI Tool (with Kysely + Bun)
 
-Cet outil en ligne de commande vous permet de **gérer facilement une base de données PostgreSQL** à travers une interface interactive. Il est écrit en **TypeScript**, utilise **Bun** comme runtime et **Kysely** pour l'accès à la base.
+This command-line tool allows you to **easily manage a PostgreSQL database** through an interactive interface. It is written in **TypeScript**, uses **Bun** as the runtime, and **Kysely** for database access.
 
-## 🚀 Fonctionnalités
+## 🚀 Features
 
-* 📦 **Dump** : Exporter la base sous forme de fichier `.sql` avec les bonnes contraintes d’ordre d’insertion.
-* 🧹 **Truncate** : Vider toutes les tables dans le bon ordre (en gérant les cycles).
-* 💣 **Drop** : Supprimer toutes les tables et types custom PostgreSQL dans le bon ordre.
-* 📊 **List** : Afficher toutes les tables du schéma `public` avec leur taille.
-* 📥 **Import** : Importer un fichier `.sql` depuis un dossier `backups/` avec rollback automatique en cas d’erreur.
-* 🧭 **CLI interactive** : Interface en ligne de commande pour exécuter facilement ces actions.
+* 📦 **Dump**: Export the database as a `.sql` file with correct insertion order constraints.
+* 🧹 **Truncate**: Empty all tables in the correct order (handling cycles).
+* 💣 **Drop**: Delete all tables and custom PostgreSQL types in the correct order.
+* 📊 **List**: Display all tables in the `public` schema with their size.
+* 📥 **Import**: Import a `.sql` file from the `backups/` folder with automatic rollback on error.
+* 🧭 **Interactive CLI**: Command-line interface to easily execute these actions.
 
 ---
 
 ## 📦 Installation
 
-1. Cloner ce dépôt :
+1. Clone this repository:
 
 ```bash
-git clone <url-du-repo>
-cd <nom-du-dossier>
+git clone <repo-url>
+cd <folder-name>
 ```
 
-2. Utiliser le container Docker : 
+2. Use the Docker container:
 
 ```bash
 docker compose up -d
 docker compose exec -it bun bash
 ```
 
-3. Installer les dépendances :
+3. Install dependencies:
 
 ```bash
 bun install
@@ -37,28 +37,28 @@ bun install
 
 ---
 
-## 📂 Structure du projet
+## 📂 Project Structure
 
 ```
 .
 ├── src/
-│   ├── backups/            # Dossier contenant les dumps SQL
-│   ├── features/           # Dossier contenant les features de CLI
-│   │   ├── dump.ts         # Dump de la base
-│   │   ├── truncate.ts     # Vider les tables
-│   │   ├── drop.ts         # Supprimer les tables et types
-│   │   ├── import.ts       # Importer un dump
-│   │   ├── list.ts         # Lister les tables avec taille
-│   └── database.ts         # Connexion Kysely
+│   ├── backups/            # Folder containing SQL dumps
+│   ├── features/           # CLI features
+│   │   ├── dump.ts         # Database dump
+│   │   ├── truncate.ts     # Empty tables
+│   │   ├── drop.ts         # Drop tables and types
+│   │   ├── import.ts       # Import dump
+│   │   ├── list.ts         # List tables with size
+│   └── database.ts         # Kysely connection
 ├── cli.ts
 └── README.md
 ```
 
 ---
 
-## 📋 Utilisation
+## 📋 Usage
 
-### Lancer la CLI
+### Run the CLI
 
 ```bash
 bun cli.ts
@@ -66,19 +66,19 @@ bun cli.ts
 
 ---
 
-## 🧠 Notes techniques
+## 🧠 Technical Notes
 
-* Utilise `SET session_replication_role = 'replica'` pour désactiver temporairement les contraintes lors des imports. (⚠️ Peut poser des problèmes en fonctions des permissions)
-* Les fichiers dump incluent **une seule requête INSERT par table** pour des performances optimisées.
-* Les dumps sont triés par **ordre de dépendance des clés étrangères**.
-* Les dumps **n'incluent pas** le schéma de la base de donnée, assurez-vous d'avoir des **fichiers de migrations** avant de drop
-* Les opérations sont **en transaction**, avec rollback automatique en cas d'échec.
+* Uses `SET session_replication_role = 'replica'` to temporarily disable constraints during imports. (⚠️ May cause issues depending on permissions)
+* Dump files include **a single INSERT query per table** for optimized performance.
+* Dumps are sorted by **foreign key dependency order**.
+* Dumps **do not include** the database schema, make sure you have **migration files** before dropping.
+* Operations are **transactional**, with automatic rollback on failure.
 
 ---
 
-## 📁 Fichiers dump
+## 📁 Dump Files
 
-Les dumps sont stockés dans le dossier `./src/backups/{nom de la bdd}/` avec un nom au format :
+Dump files are stored in the folder `./src/backups/{database name}/` with the following naming format:
 
 ```
 dump-DD-MM-YYYY-<timestamp>.sql
@@ -86,33 +86,33 @@ dump-DD-MM-YYYY-<timestamp>.sql
 
 ---
 
-## 🧩 Prérequis
+## 🧩 Prerequisites
 
-* Docker 
-* Une base de donnée PostgreSQL
-* Un fichier `.env` contenant une ou plusieurs connection strings, toutes appelées : DATABASE_URL
-* Rajoutez un commentaire au dessus de chaque connection strings pour la nommer 
+* Docker
+* A PostgreSQL database
+* A `.env` file containing one or more connection strings, all named: DATABASE_URL
+* Add a comment above each connection string to name it
 
-Exemple : 
+Example:
 
 ```bash
-# database local
+# local database
 DATABASE_URL=...
 
-# database dev
+# dev database
 DATABASE_URL=...
 
-# database val
+# val database
 DATABASE_URL=...
 ```
 
 ---
 
-## ✅ À venir (pas dans l'ordre)
+## ✅ Coming Soon (not in order)
 
-- [x] ~~Support multi bases de données~~
-- [ ] Export des schémas
-- [ ] Support MySQL, SQLite, ...
-- [ ] Retirer Kysely (pas nécessaire)
+- [x] ~~Multi-database support~~
+- [ ] Schema export
+- [ ] MySQL, SQLite, ... support
+- [ ] Remove Kysely (not necessary)
 
 ---

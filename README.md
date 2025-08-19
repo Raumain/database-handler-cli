@@ -24,8 +24,8 @@ npm i -g database-handler-cli
 1. Clone this repository:
 
 ```bash
-git clone <repo-url>
-cd <folder-name>
+git clone https://github.com/Raumain/database-handler-cli.git
+cd database-handler-cli
 ```
 
 2. Use the Docker container:

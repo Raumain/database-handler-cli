@@ -9,7 +9,6 @@ import { importDump } from "./features/import.js";
 import { listTablesWithSize } from "./features/list.js";
 import { getDbConnectionsFromEnv } from "./utils/getDbConnections.js";
 
-// Fonction pour demander à l'utilisateur de choisir une base de données
 async function chooseDatabase() {
 	const dbConnections = getDbConnectionsFromEnv();
 
@@ -32,26 +31,21 @@ async function chooseDatabase() {
 		},
 	]);
 
-	// Charger la chaîne de connexion choisie
 	const dbUrl = dbConnections.get(selectedDb);
 	if (!dbUrl) {
 		console.error("❌ Erreur : chaîne de connexion non valide.");
 		process.exit(1);
 	}
 
-	// Retourner l'objet de base de données configurée
 	const db = database(dbUrl);
 	console.log(`✅ Connexion à la base de données : ${selectedDb}`);
 	return { selectedDb, db };
 }
 
 async function main() {
-	// Sélectionner une base de données au départ
 	let { selectedDb, db } = await chooseDatabase();
 
-	// Initialiser le cycle de la CLI
 	while (true) {
-		// Afficher les actions disponibles
 		const { action } = await inquirer.prompt([
 			{
 				type: "list",
@@ -87,7 +81,6 @@ async function main() {
 					await importDump(db);
 					break;
 				case "changeDb":
-					// Changer de base de données
 					console.log("🔑 Choix d'une nouvelle base de données...");
 					({ selectedDb, db } = await chooseDatabase());
 					break;

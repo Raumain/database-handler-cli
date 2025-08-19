@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 function getDumpFilePath(dbName: string): string {
 	const now = new Date();
 	const day = String(now.getDate()).padStart(2, "0");
-	const month = String(now.getMonth() + 1).padStart(2, "0"); // les mois commencent à 0
+	const month = String(now.getMonth() + 1).padStart(2, "0");
 	const year = now.getFullYear();
 	const timestamp = Date.now();
 
@@ -24,7 +24,6 @@ function getDumpFilePath(dbName: string): string {
 	);
 }
 
-// Récupère toutes les tables du schéma public
 async function getAllTableNames(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -39,12 +38,11 @@ async function getAllTableNames(
 	return result.rows.map((row) => row.table_name);
 }
 
-// Récupère les dépendances de clés étrangères
 async function getForeignKeyDependencies(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<Map<string, string[]>> {
 	const result = await sql<{
-		table_name: string; // la table qui dépend d'une autre
+		table_name: string;
 		referenced_table_name: string;
 	}>`
 		SELECT
@@ -60,7 +58,7 @@ async function getForeignKeyDependencies(
 			kcu.table_schema = 'public'
 		`.execute(db);
 
-	const dependencies = new Map<string, string[]>(); // clé: table, valeur: dépendances
+	const dependencies = new Map<string, string[]>();
 
 	for (const { table_name, referenced_table_name } of result.rows) {
 		if (!dependencies.has(table_name)) {
@@ -72,7 +70,6 @@ async function getForeignKeyDependencies(
 	return dependencies;
 }
 
-// Trie les tables selon les dépendances de clés étrangères
 async function sortTablesByForeignKeys(
 	tables: string[],
 	db: Kysely<Record<string, unknown>>,
@@ -81,13 +78,12 @@ async function sortTablesByForeignKeys(
 	const sortedTables: string[] = [];
 	const visited = new Set<string>();
 
-	// Fonction de tri récursif
 	async function visit(table: string) {
 		if (!visited.has(table)) {
 			visited.add(table);
 			const deps = dependencies.get(table) || [];
 			for (const dep of deps) {
-				await visit(dep); // On insère d’abord les dépendances
+				await visit(dep);
 			}
 			sortedTables.push(table);
 		}
@@ -100,7 +96,6 @@ async function sortTablesByForeignKeys(
 	return sortedTables;
 }
 
-// Échappe les valeurs SQL
 function escapeLiteral(value: unknown): string {
 	if (value === null || value === undefined) return "NULL";
 	if (typeof value === "number") return value.toString();
@@ -109,7 +104,6 @@ function escapeLiteral(value: unknown): string {
 	return `'${(value as string).replace(/'/g, "''")}'`;
 }
 
-// Génère la requête INSERT pour une table
 async function generateInsertSQL(
 	tableName: string,
 	db: Kysely<Record<string, unknown>>,
@@ -131,7 +125,6 @@ async function generateInsertSQL(
 		.join(", ")})\nVALUES\n${values};\n`;
 }
 
-// Script principal
 export async function dump(
 	db: Kysely<Record<string, unknown>>,
 	dbName: string,

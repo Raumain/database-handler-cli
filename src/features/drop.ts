@@ -1,9 +1,6 @@
 import chalk from "chalk";
 import { type Kysely, sql } from "kysely";
 
-/**
- * Récupère toutes les tables du schéma public
- */
 async function getAllTableNames(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -17,9 +14,6 @@ async function getAllTableNames(
 	return result.rows.map((r) => r.table_name);
 }
 
-/**
- * Récupère les dépendances de clés étrangères (qui dépend de qui)
- */
 async function getForeignKeyDependencies(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<Map<string, Set<string>>> {
@@ -48,10 +42,6 @@ async function getForeignKeyDependencies(
 	return map;
 }
 
-/**
- * Trie topologiquement les tables selon les dépendances (FK)
- * En cas de cycle, une erreur est levée
- */
 function topologicalSort(
 	tables: string[],
 	dependencies: Map<string, Set<string>>,
@@ -78,13 +68,12 @@ function topologicalSort(
 		}
 	}
 
-	return sorted.reverse(); // Parents last
+	return sorted.reverse();
 }
 
 async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
 	console.log(chalk.gray("🧹 Suppression des types personnalisés..."));
 
-	// Supprimer les types personnalisés du schéma public
 	const types = await sql<{ typname: string }>`
       SELECT t.typname
       FROM pg_catalog.pg_type t
@@ -104,9 +93,6 @@ async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
 	console.log(chalk.green("✅ Types personnalisés supprimés."));
 }
 
-/**
- * Supprime toutes les tables dans le bon ordre
- */
 export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
 	const tables = await getAllTableNames(db);
 	const deps = await getForeignKeyDependencies(db);

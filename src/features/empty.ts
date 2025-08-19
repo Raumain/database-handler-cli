@@ -1,7 +1,6 @@
 import inquirer from "inquirer";
 import { type Kysely, sql } from "kysely";
 
-// Fonction pour récupérer toutes les tables
 async function getAllTableNames(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -15,7 +14,6 @@ async function getAllTableNames(
 	return result.rows.map((r) => r.table_name);
 }
 
-// Fonction principale pour vider les tables
 export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 	// Récupérer toutes les tables
 	const tables = await getAllTableNames(db);
@@ -25,7 +23,6 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 		return;
 	}
 
-	// Demander à l'utilisateur de choisir les tables
 	const { selectedTables } = await inquirer.prompt([
 		{
 			type: "checkbox",
@@ -39,7 +36,6 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 		},
 	]);
 
-	// Si l'utilisateur choisit "Tout sélectionner"
 	const tablesToTruncate = (selectedTables as Array<string>).includes("all")
 		? tables
 		: (selectedTables as Array<string>);
@@ -49,13 +45,11 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 		return;
 	}
 
-	// Échapper les noms des tables
 	const tableList = tablesToTruncate.map((t) => `"${t}"`).join(", ");
 
 	try {
 		console.log("🧨 Vidage des tables en cours (avec CASCADE)...");
 
-		// Exécuter la commande TRUNCATE
 		await sql
 			.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`)
 			.execute(db);

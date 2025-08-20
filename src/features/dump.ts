@@ -17,8 +17,7 @@ function getDumpFilePath(dbName: string): string {
 	const filename = `dump-${day}-${month}-${year}-${timestamp}.sql`;
 
 	return path.resolve(
-		__dirname,
-		"..",
+		process.cwd(),
 		"backups",
 		toCamelCase(dbName),
 		filename,
@@ -163,7 +162,6 @@ export async function dump(
 	].join("\n");
 
 	const OUTPUT_FILE = getDumpFilePath(dbName);
-	// Ensure the directory exists before writing
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 

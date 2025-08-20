@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type Kysely, sql } from "kysely";
@@ -163,6 +163,8 @@ export async function dump(
 	].join("\n");
 
 	const OUTPUT_FILE = getDumpFilePath(dbName);
+	// Ensure the directory exists before writing
+	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 
 	console.log(`🎉 Dump SQL generated at ${OUTPUT_FILE}`);

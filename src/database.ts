@@ -5,6 +5,7 @@ export function database(databaseUrl: string) {
 	const dialect = new PostgresDialect({
 		pool: new Pool({
 			connectionString: databaseUrl,
+			ssl: { rejectUnauthorized: false }
 		}),
 	});
 

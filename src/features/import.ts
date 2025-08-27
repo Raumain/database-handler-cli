@@ -1,13 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import { type Kysely, sql } from "kysely";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const BACKUPS_DIR = path.resolve(__dirname, "..", "./backups");
+const BACKUPS_DIR = path.resolve(
+	process.cwd(),
+	"backups"
+);
 
 async function getAvailableDumps(dir: string): Promise<string[]> {
 	const files = await fs.readdir(dir, { withFileTypes: true });
@@ -50,11 +50,10 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 		]);
 
 		const dumpPath = path.resolve(BACKUPS_DIR, selectedDump);
-		const dump = Bun.file(dumpPath);
-
 		console.log(chalk.gray(`📥 Importing file: ${dumpPath}...`));
 
-		const statements = (await dump.text())
+		const dumpContent = await fs.readFile(dumpPath, "utf8");
+		const statements = dumpContent
 			.split(/;\s*\n/)
 			.map((stmt) => stmt.trim())
 			.filter(Boolean);

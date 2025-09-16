@@ -7,6 +7,7 @@ import { dump } from "./features/dump.js";
 import { truncateTables } from "./features/empty.js";
 import { importDump } from "./features/import.js";
 import { listTablesWithSize } from "./features/list.js";
+import { exportSchema } from "./features/schema.js";
 import { getDbConnectionsFromEnv } from "./utils/getDbConnections.js";
 
 async function chooseDatabase() {
@@ -53,6 +54,7 @@ async function main() {
         message: "📋 What do you want to do?",
         choices: [
           { name: "📤 Dump the database to a SQL file", value: "dump" },
+          { name: "📜 Export schema to a SQL file", value: "schema" },
           { name: "🧨 Drop all tables (DROP)", value: "drop" },
           { name: "🧹 Truncate all data (TRUNCATE)", value: "truncate" },
           { name: "📊 List tables with their size", value: "list" },
@@ -67,6 +69,9 @@ async function main() {
       switch (action) {
         case "dump":
           await dump(db, selectedDb);
+          break;
+        case "schema":
+          await exportSchema(db, selectedDb);
           break;
         case "drop":
           await dropAllTables(db);

@@ -1,42 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { type Kysely, sql } from "kysely";
-import { toCamelCase } from "../utils/toCamelCase.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function getDumpFilePath(dbName: string): string {
-	const now = new Date();
-	const day = String(now.getDate()).padStart(2, "0");
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const year = now.getFullYear();
-	const timestamp = Date.now();
-
-	const filename = `dump-${day}-${month}-${year}-${timestamp}.sql`;
-
-	return path.resolve(
-		process.cwd(),
-		"backups",
-		toCamelCase(dbName),
-		filename,
-	);
-}
-
-async function getAllTableNames(
-	db: Kysely<Record<string, unknown>>,
-): Promise<string[]> {
-	const result = await sql<{ table_name: string }>`
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema = 'public'
-      AND table_type = 'BASE TABLE'
-      AND table_name NOT LIKE 'kysely%'
-  `.execute(db);
-
-	return result.rows.map((row) => row.table_name);
-}
+import { getAllTableNames } from "../utils/getAllTableNames.js";
+import { getDumpFilePath } from "../utils/getDumpFilePath.js";
 
 async function getForeignKeyDependencies(
 	db: Kysely<Record<string, unknown>>,
@@ -161,7 +127,7 @@ export async function dump(
 		"SET session_replication_role = 'origin';",
 	].join("\n");
 
-	const OUTPUT_FILE = getDumpFilePath(dbName);
+	const OUTPUT_FILE = getDumpFilePath(dbName, "dump");
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 

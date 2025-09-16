@@ -1,0 +1,15 @@
+services:
+  bun:
+    image: oven/bun:latest
+    command: bash
+    volumes:
+      - .:${PWD}
+    working_dir: ${PWD}
+    environment:
+      - TZ=Europe/Paris
+      - LOG_LEVEL=trace
+    env_file:
+      - .env
+    tty: true
+    init: true
+  

@@ -108,14 +108,10 @@ export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
 			console.log(chalk.green(`✅ Table "${table}" removed`));
 		}
 
-		console.log(
-			chalk.green("🎉 All tables have been properly removed."),
-		);
+		console.log(chalk.green("🎉 All tables have been properly removed."));
 	} catch (_e: unknown) {
 		console.warn(
-			chalk.yellow(
-				"⚠️ Cycle detected: forced removal (DROP CASCADE on all)",
-			),
+			chalk.yellow("⚠️ Cycle detected: forced removal (DROP CASCADE on all)"),
 		);
 
 		const tableList = tables.map((t) => `"${t}"`).join(", ");

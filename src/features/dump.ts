@@ -3,6 +3,7 @@ import path from "node:path";
 import { type Kysely, sql } from "kysely";
 import { getAllTableNames } from "../utils/getAllTableNames.js";
 import { getDumpFilePath } from "../utils/getDumpFilePath.js";
+import { generateSchemaStatements } from "./schema.js";
 
 async function getForeignKeyDependencies(
 	db: Kysely<Record<string, unknown>>,
@@ -94,6 +95,7 @@ async function generateInsertSQL(
 export async function dump(
 	db: Kysely<Record<string, unknown>>,
 	dbName: string,
+	withSchema = false,
 ) {
 	const tables = await getAllTableNames(db);
 
@@ -117,7 +119,14 @@ export async function dump(
 		}
 	}
 
+	let schemaStatements: string[] = [];
+	if (withSchema) {
+		console.log("📐 Exporting schema...");
+		schemaStatements = await generateSchemaStatements(db, sortedTables);
+	}
+
 	const fullSQL = [
+		...(withSchema ? [...schemaStatements, ""] : []),
 		"-- Disable constraints",
 		"SET session_replication_role = 'replica';",
 		"",

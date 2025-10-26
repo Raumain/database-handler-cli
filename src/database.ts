@@ -4,8 +4,7 @@ import { Pool, type PoolConfig } from "pg";
 export function database(databaseUrl: string) {
 	// Enable SSL only if required by the connection string
 	const useSSL =
-		databaseUrl.includes("sslmode=require") ||
-		databaseUrl.includes("ssl=true");
+		databaseUrl.includes("sslmode=require") || databaseUrl.includes("ssl=true");
 
 	const poolConfig: PoolConfig = { connectionString: databaseUrl };
 	if (useSSL) {
@@ -20,5 +19,4 @@ export function database(databaseUrl: string) {
 		dialect,
 	});
 	return db;
-};
-
+}

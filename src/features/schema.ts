@@ -211,19 +211,15 @@ async function getTableSchema(
 	return createTableStatement;
 }
 
-export async function exportSchema(
+export async function generateSchemaStatements(
 	db: Kysely<Record<string, unknown>>,
-	dbName: string,
-) {
-	const tables = await getAllTableNames(db);
-	console.log(`📦 Found ${tables.length} tables to export schema for.`);
-
+	tables: string[],
+): Promise<string[]> {
 	const createTableStatements: string[] = [];
 	for (const table of tables) {
 		try {
 			const createTableStatement = await getTableSchema(db, table);
 			createTableStatements.push(createTableStatement);
-			console.log(`✅ Exported schema for table ${table}`);
 		} catch (e) {
 			console.error(`❌ Failed to export schema for table "${table}":`, e);
 		}
@@ -235,7 +231,10 @@ export async function exportSchema(
 			const fks = await getForeignKeys(db, table);
 			foreignKeyStatements.push(...fks);
 		} catch (e) {
-			console.error(`❌ Failed to export foreign keys for table "${table}":`, e);
+			console.error(
+				`❌ Failed to export foreign keys for table "${table}":`,
+				e,
+			);
 		}
 	}
 
@@ -249,11 +248,29 @@ export async function exportSchema(
 		}
 	}
 
-	const fullSQL = [
+	return [
 		...createTableStatements,
+		"",
 		...foreignKeyStatements,
+		"",
 		...indexStatements,
-	].join("\n\n");
+	];
+}
+
+export async function exportSchema(
+	db: Kysely<Record<string, unknown>>,
+	dbName: string,
+) {
+	const tables = await getAllTableNames(db);
+	console.log(`📦 Found ${tables.length} tables to export schema for.`);
+
+	const statements = await generateSchemaStatements(db, tables);
+
+	for (const table of tables) {
+		console.log(`✅ Exported schema for table ${table}`);
+	}
+
+	const fullSQL = statements.join("\n\n");
 
 	const OUTPUT_FILE = getDumpFilePath(dbName, "schema");
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });

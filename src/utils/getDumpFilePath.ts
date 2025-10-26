@@ -13,10 +13,5 @@ export function getDumpFilePath(
 
 	const filename = `${prefix}-${day}-${month}-${year}-${timestamp}.sql`;
 
-	return path.resolve(
-		process.cwd(),
-		"backups",
-		toCamelCase(dbName),
-		filename,
-	);
+	return path.resolve(process.cwd(), "backups", toCamelCase(dbName), filename);
 }

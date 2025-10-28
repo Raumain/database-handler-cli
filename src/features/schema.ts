@@ -7,6 +7,7 @@ import { getDumpFilePath } from "../utils/getDumpFilePath.js";
 interface ColumnDefinition {
 	column_name: string;
 	data_type: string;
+	udt_name: string;
 	column_default: string | null;
 	is_nullable: "YES" | "NO";
 	character_maximum_length: number | null;
@@ -31,6 +32,128 @@ interface ForeignKeyDefinition {
 interface IndexDefinition {
 	indexname: string;
 	indexdef: string;
+}
+
+interface SequenceDefinition {
+	sequence_name: string;
+	data_type: string;
+	start_value: string;
+	increment: string;
+	max_value: string;
+	min_value: string;
+	cycle: boolean;
+}
+
+
+
+/**
+ * Export all PostgreSQL sequences
+ */
+async function getSequences(
+	db: Kysely<Record<string, unknown>>,
+): Promise<string[]> {
+	const result = await sql<SequenceDefinition>`
+        SELECT
+            s.sequence_name,
+            s.data_type,
+            s.start_value,
+            s.increment,
+            s.maximum_value as max_value,
+            s.minimum_value as min_value,
+            s.cycle_option = 'YES' as cycle
+        FROM
+            information_schema.sequences s
+        WHERE
+            s.sequence_schema = 'public'
+    `.execute(db);
+
+	const sequences: string[] = [];
+	for (const seq of result.rows) {
+		const createSeq = `CREATE SEQUENCE IF NOT EXISTS public."${seq.sequence_name}";`;
+		sequences.push(createSeq);
+	}
+
+	return sequences;
+}
+
+/**
+ * Get sequence ownership statements (ALTER SEQUENCE ... OWNED BY ...)
+ */
+async function getSequenceOwnerships(
+	db: Kysely<Record<string, unknown>>,
+): Promise<string[]> {
+	const result = await sql<{
+		sequence_name: string;
+		table_name: string;
+		column_name: string;
+	}>`
+        SELECT
+            s.relname AS sequence_name,
+            t.relname AS table_name,
+            a.attname AS column_name
+        FROM
+            pg_class s
+        JOIN
+            pg_depend d ON d.objid = s.oid
+        JOIN
+            pg_class t ON d.refobjid = t.oid
+        JOIN
+            pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+        JOIN
+            pg_namespace n ON n.oid = s.relnamespace
+        WHERE
+            s.relkind = 'S'
+            AND n.nspname = 'public'
+    `.execute(db);
+
+	return result.rows.map(
+		(row) =>
+			`ALTER SEQUENCE public."${row.sequence_name}" OWNED BY "${row.table_name}"."${row.column_name}";`,
+	);
+}
+
+/**
+ * Export all custom PostgreSQL ENUM types
+ */
+async function getEnumTypes(
+	db: Kysely<Record<string, unknown>>,
+): Promise<string[]> {
+	const result = await sql<{
+		typname: string;
+		enumlabel: string;
+	}>`
+        SELECT
+            t.typname,
+            e.enumlabel
+        FROM
+            pg_type t
+        JOIN
+            pg_enum e ON t.oid = e.enumtypid
+        JOIN
+            pg_namespace n ON n.oid = t.typnamespace
+        WHERE
+            n.nspname = 'public'
+        ORDER BY
+            t.typname, e.enumsortorder
+    `.execute(db);
+
+	// Group by enum type name
+	const enumMap = new Map<string, string[]>();
+	for (const row of result.rows) {
+		if (!enumMap.has(row.typname)) {
+			enumMap.set(row.typname, []);
+		}
+		enumMap.get(row.typname)?.push(row.enumlabel);
+	}
+
+	// Generate CREATE TYPE statements
+	const enumTypes: string[] = [];
+	for (const [typname, labels] of enumMap.entries()) {
+		const labelList = labels.map((l) => `'${l}'`).join(", ");
+		enumTypes.push(`CREATE TYPE "${typname}" AS ENUM (${labelList});`);
+	}
+
+	return enumTypes;
 }
 
 async function getTableConstraints(
@@ -164,6 +287,7 @@ async function getTableSchema(
         SELECT
             column_name,
             data_type,
+            udt_name,
             column_default,
             is_nullable,
             character_maximum_length,
@@ -180,16 +304,38 @@ async function getTableSchema(
 	const columns = columnsResult.rows
 		.map((col) => {
 			let type = col.data_type;
+
+			// Handle specific data types
 			if (type === "character varying") {
-				type = `varchar(${col.character_maximum_length})`;
-			} else if (type === "numeric") {
+				type = col.character_maximum_length
+					? `varchar(${col.character_maximum_length})`
+					: "varchar(255)";
+			} else if (type === "numeric" && col.numeric_precision) {
 				type = `numeric(${col.numeric_precision}, ${col.numeric_scale})`;
+			} else if (type === "timestamp with time zone") {
+				type = "timestamp with time zone";
+			} else if (type === "timestamp without time zone") {
+				type = "timestamp";
+			} else if (type === "USER-DEFINED") {
+				// Use the actual user-defined type name (e.g., ENUM)
+				type = col.udt_name;
+			} else if (type === "integer" || type === "bigint") {
+				// Keep as is
+				type = col.data_type;
+			} else if (type === "text") {
+				type = "text";
+			} else if (type === "boolean") {
+				type = "boolean";
+			} else if (type === "uuid") {
+				type = "uuid";
 			}
+
 			const nullable = col.is_nullable === "YES" ? "NULL" : "NOT NULL";
 			const defaultValue = col.column_default
 				? `DEFAULT ${col.column_default}`
 				: "";
-			return `    "${col.column_name}" ${type} ${nullable} ${defaultValue}`;
+
+			return `    "${col.column_name}" ${type} ${nullable} ${defaultValue}`.trim();
 		})
 		.join(",\n");
 
@@ -215,6 +361,16 @@ export async function generateSchemaStatements(
 	db: Kysely<Record<string, unknown>>,
 	tables: string[],
 ): Promise<string[]> {
+	// 1. Export sequences first
+	console.log("📦 Exporting sequences...");
+	const sequences = await getSequences(db);
+
+	// 2. Export custom ENUM types
+	console.log("📦 Exporting custom types...");
+	const enumTypes = await getEnumTypes(db);
+
+	// 3. Export tables
+	console.log("📦 Exporting tables...");
 	const createTableStatements: string[] = [];
 	for (const table of tables) {
 		try {
@@ -225,6 +381,12 @@ export async function generateSchemaStatements(
 		}
 	}
 
+	// 4. Get sequence ownerships (after tables are created)
+	console.log("📦 Exporting sequence ownerships...");
+	const sequenceOwnerships = await getSequenceOwnerships(db);
+
+	// 5. Export foreign keys
+	console.log("📦 Exporting foreign keys...");
 	const foreignKeyStatements: string[] = [];
 	for (const table of tables) {
 		try {
@@ -238,6 +400,8 @@ export async function generateSchemaStatements(
 		}
 	}
 
+	// 6. Export indexes
+	console.log("📦 Exporting indexes...");
 	const indexStatements: string[] = [];
 	for (const table of tables) {
 		try {
@@ -248,12 +412,16 @@ export async function generateSchemaStatements(
 		}
 	}
 
+	// Return in correct order
 	return [
+		...(sequences.length > 0 ? sequences : []),
+		...(enumTypes.length > 0 ? ["", ...enumTypes] : []),
+		"",
 		...createTableStatements,
 		"",
-		...foreignKeyStatements,
-		"",
-		...indexStatements,
+		...(sequenceOwnerships.length > 0 ? sequenceOwnerships : []),
+		...(foreignKeyStatements.length > 0 ? ["", ...foreignKeyStatements] : []),
+		...(indexStatements.length > 0 ? ["", ...indexStatements] : []),
 	];
 }
 

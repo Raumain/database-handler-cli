@@ -92,6 +92,47 @@ async function generateInsertSQL(
 		.join(", ")})\nVALUES\n${values};\n`;
 }
 
+async function getSequenceResetStatements(
+	db: Kysely<Record<string, unknown>>,
+	tables: string[],
+): Promise<string[]> {
+	const resetStatements: string[] = [];
+
+	for (const table of tables) {
+		const result = await sql<{
+			sequence_name: string;
+			column_name: string;
+		}>`
+            SELECT
+                s.relname AS sequence_name,
+                a.attname AS column_name
+            FROM
+                pg_class s
+            JOIN
+                pg_depend d ON d.objid = s.oid
+            JOIN
+                pg_class t ON d.refobjid = t.oid
+            JOIN
+                pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+            JOIN
+                pg_namespace n ON n.oid = s.relnamespace
+            WHERE
+                s.relkind = 'S'
+                AND n.nspname = 'public'
+                AND t.relname = ${table}
+        `.execute(db);
+
+		for (const row of result.rows) {
+			// Use GREATEST to ensure the sequence value is at least 1
+			resetStatements.push(
+				`SELECT setval('public."${row.sequence_name}"', GREATEST(COALESCE((SELECT MAX("${row.column_name}") FROM "${table}"), 0), 1));`,
+			);
+		}
+	}
+
+	return resetStatements;
+}
+
 export async function dump(
 	db: Kysely<Record<string, unknown>>,
 	dbName: string,
@@ -125,6 +166,10 @@ export async function dump(
 		schemaStatements = await generateSchemaStatements(db, sortedTables);
 	}
 
+	// Get sequence reset statements
+	console.log("📐 Preparing sequence reset statements...");
+	const sequenceResets = await getSequenceResetStatements(db, sortedTables);
+
 	const fullSQL = [
 		...(withSchema ? [...schemaStatements, ""] : []),
 		"-- Disable constraints",
@@ -134,6 +179,7 @@ export async function dump(
 		"",
 		"-- Re-enable constraints",
 		"SET session_replication_role = 'origin';",
+		...(sequenceResets.length > 0 ? ["", ...sequenceResets] : []),
 	].join("\n");
 
 	const OUTPUT_FILE = getDumpFilePath(dbName, "dump");

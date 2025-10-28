@@ -2,6 +2,10 @@
 
 This command-line tool allows you to **easily manage a PostgreSQL database** through an interactive interface. It is written in **TypeScript**, uses **Bun** as the runtime, and **Kysely** for database access.
 
+## 📺 Demo
+
+![demo](https://github.com/Raumain/database-handler-cli/blob/main/demo.gif)
+
 ## 🚀 Features
 
 * 📦 **Dump**: Export the database as a `.sql` file with correct insertion order constraints.

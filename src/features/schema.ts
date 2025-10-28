@@ -46,9 +46,6 @@ interface SequenceDefinition {
 
 
 
-/**
- * Export all PostgreSQL sequences
- */
 async function getSequences(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -76,9 +73,6 @@ async function getSequences(
 	return sequences;
 }
 
-/**
- * Get sequence ownership statements (ALTER SEQUENCE ... OWNED BY ...)
- */
 async function getSequenceOwnerships(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -112,9 +106,6 @@ async function getSequenceOwnerships(
 	);
 }
 
-/**
- * Export all custom PostgreSQL ENUM types
- */
 async function getEnumTypes(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -137,7 +128,6 @@ async function getEnumTypes(
             t.typname, e.enumsortorder
     `.execute(db);
 
-	// Group by enum type name
 	const enumMap = new Map<string, string[]>();
 	for (const row of result.rows) {
 		if (!enumMap.has(row.typname)) {
@@ -146,7 +136,6 @@ async function getEnumTypes(
 		enumMap.get(row.typname)?.push(row.enumlabel);
 	}
 
-	// Generate CREATE TYPE statements
 	const enumTypes: string[] = [];
 	for (const [typname, labels] of enumMap.entries()) {
 		const labelList = labels.map((l) => `'${l}'`).join(", ");
@@ -361,15 +350,12 @@ export async function generateSchemaStatements(
 	db: Kysely<Record<string, unknown>>,
 	tables: string[],
 ): Promise<string[]> {
-	// 1. Export sequences first
 	console.log("📦 Exporting sequences...");
 	const sequences = await getSequences(db);
 
-	// 2. Export custom ENUM types
 	console.log("📦 Exporting custom types...");
 	const enumTypes = await getEnumTypes(db);
 
-	// 3. Export tables
 	console.log("📦 Exporting tables...");
 	const createTableStatements: string[] = [];
 	for (const table of tables) {
@@ -381,11 +367,9 @@ export async function generateSchemaStatements(
 		}
 	}
 
-	// 4. Get sequence ownerships (after tables are created)
 	console.log("📦 Exporting sequence ownerships...");
 	const sequenceOwnerships = await getSequenceOwnerships(db);
 
-	// 5. Export foreign keys
 	console.log("📦 Exporting foreign keys...");
 	const foreignKeyStatements: string[] = [];
 	for (const table of tables) {
@@ -400,7 +384,6 @@ export async function generateSchemaStatements(
 		}
 	}
 
-	// 6. Export indexes
 	console.log("📦 Exporting indexes...");
 	const indexStatements: string[] = [];
 	for (const table of tables) {
@@ -412,7 +395,6 @@ export async function generateSchemaStatements(
 		}
 	}
 
-	// Return in correct order
 	return [
 		...(sequences.length > 0 ? sequences : []),
 		...(enumTypes.length > 0 ? ["", ...enumTypes] : []),

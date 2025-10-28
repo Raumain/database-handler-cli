@@ -4,10 +4,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { type Kysely, sql } from "kysely";
 
-const BACKUPS_DIR = path.resolve(
-	process.cwd(),
-	"backups"
-);
+const BACKUPS_DIR = path.resolve(process.cwd(), "backups");
 
 async function getAvailableDumps(dir: string): Promise<string[]> {
 	const files = await fs.readdir(dir, { withFileTypes: true });
@@ -34,9 +31,7 @@ export async function importDump(db: Kysely<Record<string, unknown>>) {
 		const dumps = await getAvailableDumps(BACKUPS_DIR);
 
 		if (dumps.length === 0) {
-			console.log(
-				chalk.red("❌ No dump file found in the backups folder."),
-			);
+			console.log(chalk.red("❌ No dump file found in the backups folder."));
 			return;
 		}
 

@@ -1,42 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { type Kysely, sql } from "kysely";
-import { toCamelCase } from "../utils/toCamelCase.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function getDumpFilePath(dbName: string): string {
-	const now = new Date();
-	const day = String(now.getDate()).padStart(2, "0");
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const year = now.getFullYear();
-	const timestamp = Date.now();
-
-	const filename = `dump-${day}-${month}-${year}-${timestamp}.sql`;
-
-	return path.resolve(
-		process.cwd(),
-		"backups",
-		toCamelCase(dbName),
-		filename,
-	);
-}
-
-async function getAllTableNames(
-	db: Kysely<Record<string, unknown>>,
-): Promise<string[]> {
-	const result = await sql<{ table_name: string }>`
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema = 'public'
-      AND table_type = 'BASE TABLE'
-      AND table_name NOT LIKE 'kysely%'
-  `.execute(db);
-
-	return result.rows.map((row) => row.table_name);
-}
+import { getAllTableNames } from "../utils/getAllTableNames.js";
+import { getDumpFilePath } from "../utils/getDumpFilePath.js";
+import { generateSchemaStatements } from "./schema.js";
 
 async function getForeignKeyDependencies(
 	db: Kysely<Record<string, unknown>>,
@@ -125,9 +92,51 @@ async function generateInsertSQL(
 		.join(", ")})\nVALUES\n${values};\n`;
 }
 
+async function getSequenceResetStatements(
+	db: Kysely<Record<string, unknown>>,
+	tables: string[],
+): Promise<string[]> {
+	const resetStatements: string[] = [];
+
+	for (const table of tables) {
+		const result = await sql<{
+			sequence_name: string;
+			column_name: string;
+		}>`
+            SELECT
+                s.relname AS sequence_name,
+                a.attname AS column_name
+            FROM
+                pg_class s
+            JOIN
+                pg_depend d ON d.objid = s.oid
+            JOIN
+                pg_class t ON d.refobjid = t.oid
+            JOIN
+                pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+            JOIN
+                pg_namespace n ON n.oid = s.relnamespace
+            WHERE
+                s.relkind = 'S'
+                AND n.nspname = 'public'
+                AND t.relname = ${table}
+        `.execute(db);
+
+		for (const row of result.rows) {
+			// Use GREATEST to ensure the sequence value is at least 1
+			resetStatements.push(
+				`SELECT setval('public."${row.sequence_name}"', GREATEST(COALESCE((SELECT MAX("${row.column_name}") FROM "${table}"), 0), 1));`,
+			);
+		}
+	}
+
+	return resetStatements;
+}
+
 export async function dump(
 	db: Kysely<Record<string, unknown>>,
 	dbName: string,
+	withSchema = false,
 ) {
 	const tables = await getAllTableNames(db);
 
@@ -151,7 +160,18 @@ export async function dump(
 		}
 	}
 
+	let schemaStatements: string[] = [];
+	if (withSchema) {
+		console.log("📐 Exporting schema...");
+		schemaStatements = await generateSchemaStatements(db, sortedTables);
+	}
+
+	// Get sequence reset statements
+	console.log("📐 Preparing sequence reset statements...");
+	const sequenceResets = await getSequenceResetStatements(db, sortedTables);
+
 	const fullSQL = [
+		...(withSchema ? [...schemaStatements, ""] : []),
 		"-- Disable constraints",
 		"SET session_replication_role = 'replica';",
 		"",
@@ -159,9 +179,10 @@ export async function dump(
 		"",
 		"-- Re-enable constraints",
 		"SET session_replication_role = 'origin';",
+		...(sequenceResets.length > 0 ? ["", ...sequenceResets] : []),
 	].join("\n");
 
-	const OUTPUT_FILE = getDumpFilePath(dbName);
+	const OUTPUT_FILE = getDumpFilePath(dbName, "dump");
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 

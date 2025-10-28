@@ -1,6 +1,6 @@
 {
 	"name": "database-handler-cli",
-	"version": "1.0.18",
+	"version": "1.1.0",
 	"description": "Outil CLI pour gérer des bases PostgreSQL (dump, import, drop, etc.)",
 	"author": "Raumain <romaintibo6@gmail.com>",
 	"license": "MIT",

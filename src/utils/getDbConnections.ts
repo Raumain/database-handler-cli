@@ -12,8 +12,7 @@ export function getDbConnectionsFromEnv(): Map<string, string> {
 
 		if (trimmedLine.startsWith("#")) {
 			currentComment = trimmedLine.slice(1).trim();
-		}
-		else if (trimmedLine.startsWith("DATABASE_URL")) {
+		} else if (trimmedLine.startsWith("DATABASE_URL")) {
 			const [key, value] = trimmedLine.split("=").map((part) => part.trim());
 			dbConnections.set(currentComment || key, value);
 		}

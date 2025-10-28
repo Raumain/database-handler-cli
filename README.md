@@ -117,7 +117,7 @@ DATABASE_URL=...
 ## ✅ Coming Soon (not in order)
 
 - [x] ~~Multi-database support~~
-- [ ] Schema export
+- [x] ~~Schema export~~
 - [ ] MySQL, SQLite, ... support
 - [ ] Remove Kysely (not necessary)
 

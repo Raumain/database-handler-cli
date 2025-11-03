@@ -1,9 +1,26 @@
 {
 	"name": "database-handler-cli",
 	"version": "1.1.0",
-	"description": "Outil CLI pour gérer des bases PostgreSQL (dump, import, drop, etc.)",
+	"description": "A powerful, interactive CLI tool for managing PostgreSQL databases with smart dependency resolution, transactional safety, and multi-database support",
 	"author": "Raumain <romaintibo6@gmail.com>",
 	"license": "MIT",
+	"keywords": [
+		"postgresql",
+		"database",
+		"cli",
+		"backup",
+		"dump",
+		"import",
+		"kysely",
+		"migration",
+		"postgres",
+		"sql"
+	],
+	"homepage": "https://github.com/Raumain/database-handler-cli#readme",
+	"bugs": {
+		"url": "https://github.com/Raumain/database-handler-cli/issues",
+		"email": "romaintibo6@gmail.com"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/raumain/database-handler-cli.git"
@@ -18,6 +35,9 @@
 		"README.md",
 		"package.json"
 	],
+	"engines": {
+		"node": ">=18.0.0"
+	},
 	"scripts": {
 		"fmt": "biome check --write --unsafe .",
 		"fmt.check": "biome check .",

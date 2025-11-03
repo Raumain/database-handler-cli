@@ -1,6 +1,9 @@
 node_modules/
-src/backups/
+backups/
 
 .env
+.env.local
+.env.*.local
 bun.lock
 dist/
+*.log

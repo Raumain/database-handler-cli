@@ -1,128 +1,238 @@
-# 🛠️ PostgreSQL CLI Tool (with Kysely + Bun)
+# Database Handler CLI
 
-This command-line tool allows you to **easily manage a PostgreSQL database** through an interactive interface. It is written in **TypeScript**, uses **Bun** as the runtime, and **Kysely** for database access.
+[![npm version](https://img.shields.io/npm/v/database-handler-cli.svg)](https://www.npmjs.com/package/database-handler-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
-## 📺 Demo
+A powerful, interactive command-line tool for managing PostgreSQL databases with confidence. Built for developers who need reliable, production-ready database operations with automatic dependency resolution and transactional safety.
 
-![demo](https://github.com/Raumain/database-handler-cli/blob/main/demo.gif)
+## Why Use This Tool?
 
-## 🚀 Features
+Managing PostgreSQL databases often involves tedious manual work: remembering foreign key dependencies, handling circular references, ensuring data integrity during imports, and maintaining consistent backup practices. This CLI automates all of that.
 
-* 📦 **Dump**: Export the database as a `.sql` file with correct insertion order constraints.
-* 🧹 **Truncate**: Empty all tables in the correct order (handling cycles).
-* 💣 **Drop**: Delete all tables and custom PostgreSQL types in the correct order.
-* 📊 **List**: Display all tables in the `public` schema with their size.
-* 📥 **Import**: Import a `.sql` file from the `backups/` folder with automatic rollback on error.
-* 🧭 **Interactive CLI**: Command-line interface to easily execute these actions.
+**Key Benefits:**
+- **Zero Configuration**: Works out of the box with any PostgreSQL database
+- **Smart Dependency Resolution**: Automatically handles foreign key relationships and circular dependencies
+- **Transactional Safety**: All operations use transactions with automatic rollback on failure
+- **Multi-Database Support**: Easily switch between multiple database connections
+- **Production-Ready**: Used in production environments with robust error handling
 
----
+## Features
 
-## 📦 Installation
+| Feature | Description |
+|---------|-------------|
+| 📦 **Smart Dumps** | Export databases with automatic foreign key ordering and optional schema inclusion |
+| 📥 **Safe Imports** | Import SQL dumps with transactional rollback on any error |
+| 🧹 **Truncate Tables** | Empty all tables while respecting foreign key constraints |
+| 💣 **Drop Everything** | Remove all tables and custom types in the correct order |
+| 📊 **Table Inspector** | List all tables with their sizes at a glance |
+| 🧭 **Interactive CLI** | User-friendly prompts guide you through every operation |
+| 🔄 **Sequence Management** | Automatically reset PostgreSQL sequences after imports |
+
+## Quick Start
+
+### Installation
 
 ```bash
-npm i -g database-handler-cli
+npm install -g database-handler-cli
 ```
 
-## 👨‍💻 Development
+### Setup
 
-1. Clone this repository:
+Create a `.env` file in your project root:
 
+```bash
+# Production database
+DATABASE_URL=postgresql://user:password@localhost:5432/prod_db
+
+# Development database
+DATABASE_URL=postgresql://user:password@localhost:5432/dev_db
+```
+
+> **Note**: Comments above `DATABASE_URL` entries are used as database identifiers in the interactive menu.
+
+### Usage
+
+Simply run:
+
+```bash
+database-handler
+```
+
+Then follow the interactive prompts to select your database and desired operation.
+
+## Demo
+
+![CLI Demo](https://github.com/Raumain/database-handler-cli/blob/main/demo.gif)
+
+## How It Works
+
+### Dump Operations
+
+The tool analyzes your database schema to determine the correct order for exporting tables based on foreign key relationships. This ensures that imports will work without constraint violations.
+
+```sql
+-- Example generated dump structure
+SET session_replication_role = 'replica';  -- Temporarily disable constraints
+
+INSERT INTO "users" (...) VALUES (...);     -- Dependencies first
+INSERT INTO "posts" (...) VALUES (...);     -- Then dependent tables
+
+SET session_replication_role = 'origin';   -- Re-enable constraints
+
+SELECT setval('public."users_id_seq"', ...); -- Reset sequences
+```
+
+**Dump Options:**
+- **Data only**: Fast exports without schema definitions (default)
+- **With schema**: Include `CREATE TABLE` statements for full database recreation
+
+Dump files are stored in `./backups/{database-name}/dump-DD-MM-YYYY-{timestamp}.sql`
+
+### Import Operations
+
+Imports run within a single transaction, ensuring atomicity:
+- If any statement fails, the entire import is rolled back
+- Your database remains in a consistent state
+- Detailed error messages help diagnose issues
+
+### Drop Operations
+
+The tool uses topological sorting to determine safe deletion order:
+1. Analyzes foreign key dependencies
+2. Detects and handles circular references
+3. Drops tables in correct order
+4. Removes custom PostgreSQL types
+5. Uses `CASCADE` only when necessary
+
+## Technical Details
+
+### Architecture
+
+```
+src/
+├── features/
+│   ├── dump.ts       # Smart database export with dependency resolution
+│   ├── import.ts     # Transactional SQL import with rollback
+│   ├── drop.ts       # Safe table/type deletion with topological sort
+│   ├── empty.ts      # Truncate all tables
+│   ├── list.ts       # Table size inspection
+│   └── schema.ts     # Schema-only export
+├── utils/
+│   ├── getAllTableNames.ts    # Table discovery
+│   ├── getDbConnections.ts    # .env parsing
+│   └── getDumpFilePath.ts     # Backup path generation
+├── database.ts       # Kysely connection factory
+└── cli.ts            # Interactive CLI interface
+```
+
+### Dependencies
+
+- **[Kysely](https://kysely.dev/)**: Type-safe SQL query builder
+- **[Inquirer.js](https://github.com/SBoudrias/Inquirer.js)**: Interactive CLI prompts
+- **[Chalk](https://github.com/chalk/chalk)**: Terminal styling
+- **[pg](https://node-postgres.com/)**: PostgreSQL client
+
+### Requirements
+
+- **Node.js**: 18+ (or Bun runtime)
+- **PostgreSQL**: 12+
+- **Permissions**: `SELECT`, `INSERT`, `DELETE`, `DROP` on target databases
+
+## Development
+
+### Local Setup
+
+1. Clone the repository:
 ```bash
 git clone https://github.com/Raumain/database-handler-cli.git
 cd database-handler-cli
 ```
 
-2. Use the Docker container:
+2. Install dependencies:
+```bash
+bun install  # or npm install
+```
+
+3. Run in development mode:
+```bash
+bun src/cli.ts
+```
+
+4. Build for production:
+```bash
+bun run build
+```
+
+### Docker Development
+
+For isolated development environments:
 
 ```bash
 docker compose up -d
 docker compose exec -it bun bash
 ```
 
-3. Install dependencies:
+### Code Quality
+
+This project uses [Biome](https://biomejs.dev/) for linting and formatting:
 
 ```bash
-bun install
+bun run fmt        # Format and fix issues
+bun run fmt.check  # Check without modifying
 ```
 
----
+## Advanced Usage
 
-## 📂 Project Structure
+### Multiple Database Connections
 
-```
-.
-├── src/
-│   ├── backups/            # Folder containing SQL dumps
-│   ├── features/           # CLI features
-│   │   ├── dump.ts         # Database dump
-│   │   ├── truncate.ts     # Empty tables
-│   │   ├── drop.ts         # Drop tables and types
-│   │   ├── import.ts       # Import dump
-│   │   ├── list.ts         # List tables with size
-│   └── database.ts         # Kysely connection
-├── cli.ts
-└── README.md
-```
-
----
-
-## 📋 Usage
-
-### Run the CLI
+The tool supports multiple database connections in a single `.env` file:
 
 ```bash
-bun cli.ts
+# Production
+DATABASE_URL=postgresql://...
+
+# Staging
+DATABASE_URL=postgresql://...
+
+# Local Development
+DATABASE_URL=postgresql://...
 ```
 
----
+Switch between databases using the interactive menu.
 
-## 🧠 Technical Notes
+### Programmatic Usage
 
-* Uses `SET session_replication_role = 'replica'` to temporarily disable constraints during imports. (⚠️ May cause issues depending on permissions)
-* Dump files include **a single INSERT query per table** for optimized performance.
-* Dumps are sorted by **foreign key dependency order**.
-* Dumps **do not include** the database schema, make sure you have **migration files** before dropping.
-* Operations are **transactional**, with automatic rollback on failure.
+While designed as a CLI, the tool can be imported programmatically:
 
----
+```typescript
+import { database } from 'database-handler-cli/database'
+import { dump } from 'database-handler-cli/features/dump'
 
-## 📁 Dump Files
-
-Dump files are stored in the folder `./src/backups/{database name}/` with the following naming format:
-
-```
-dump-DD-MM-YYYY-<timestamp>.sql
+const db = database('postgresql://...')
+await dump(db, 'my-database', false)
 ```
 
----
+## Roadmap
 
-## 🧩 Prerequisites
+- [ ] Support for MySQL and SQLite
+- [ ] Parallel dump/import for large databases
+- [ ] Incremental backups
+- [ ] Cloud storage integration (S3, Azure Blob)
+- [ ] Schema diffing and migration generation
 
-* Docker (development only)
-* A PostgreSQL database
-* A `.env` file containing one or more connection strings, all named: DATABASE_URL
-* Add a comment above each connection string to name it
+## Contributing
 
-Example:
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-```bash
-# local database
-DATABASE_URL=...
+## Security
 
-# dev database
-DATABASE_URL=...
+Found a security vulnerability? Please report it privately to [romaintibo6@gmail.com](mailto:romaintibo6@gmail.com). See [SECURITY.md](SECURITY.md) for details.
 
-# val database
-DATABASE_URL=...
-```
+## License
 
----
+[MIT](LICENSE) © [Raumain](https://github.com/Raumain)
 
-## ✅ Coming Soon (not in order)
+## Acknowledgments
 
-- [x] ~~Multi-database support~~
-- [x] ~~Schema export~~
-- [ ] MySQL, SQLite, ... support
-- [ ] Remove Kysely (not necessary)
-
----
+Built with ❤️ using TypeScript, Bun, and Kysely.

@@ -1,6 +1,6 @@
 {
 	"name": "database-handler-cli",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "A powerful, interactive CLI tool for managing PostgreSQL databases with smart dependency resolution, transactional safety, and multi-database support",
 	"author": "Raumain <romaintibo6@gmail.com>",
 	"license": "MIT",

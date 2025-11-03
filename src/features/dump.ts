@@ -140,7 +140,7 @@ export async function dump(
 ) {
 	const tables = await getAllTableNames(db);
 
-	console.log(`📦 Found ${tables.length} tables to dump.`);
+	console.log(`Found ${tables.length} tables to dump.`);
 
 	const sortedTables = await sortTablesByForeignKeys(tables, db);
 
@@ -151,23 +151,23 @@ export async function dump(
 			const sql = await generateInsertSQL(table, db);
 			if (sql) {
 				insertStatements.push(sql);
-				console.log(`✅ Dumped ${table}`);
+				console.log(`Dumped ${table}`);
 			} else {
-				console.log(`⚠️  Skipped empty table ${table}`);
+				console.log(`Skipped empty table ${table}`);
 			}
 		} catch (e) {
-			console.error(`❌ Failed to dump table "${table}":`, e);
+			console.error(`Failed to dump table "${table}":`, e);
 		}
 	}
 
 	let schemaStatements: string[] = [];
 	if (withSchema) {
-		console.log("📐 Exporting schema...");
+		console.log("Exporting schema...");
 		schemaStatements = await generateSchemaStatements(db, sortedTables);
 	}
 
 	// Get sequence reset statements
-	console.log("📐 Preparing sequence reset statements...");
+	console.log("Preparing sequence reset statements...");
 	const sequenceResets = await getSequenceResetStatements(db, sortedTables);
 
 	const fullSQL = [
@@ -186,5 +186,5 @@ export async function dump(
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 
-	console.log(`🎉 Dump SQL generated at ${OUTPUT_FILE}`);
+	console.log(`Dump SQL generated at ${OUTPUT_FILE}`);
 }

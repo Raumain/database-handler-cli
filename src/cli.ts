@@ -14,7 +14,7 @@ async function chooseDatabase() {
 	const dbConnections = getDbConnectionsFromEnv();
 
 	if (dbConnections.size === 0) {
-		console.log("❌ No database connection found in the .env file.");
+		console.log("Error: No database connection found in the .env file.");
 		process.exit(1);
 	}
 
@@ -32,12 +32,12 @@ async function chooseDatabase() {
 
 	const dbUrl = dbConnections.get(selectedDb);
 	if (!dbUrl) {
-		console.error("❌ Error: Invalid connection string.");
+		console.error("Error: Invalid connection string.");
 		process.exit(1);
 	}
 
 	const db = database(dbUrl);
-	console.log(`✅ Connected to database: ${selectedDb}`);
+	console.log(`Connected to database: ${selectedDb}`);
 	return { selectedDb, db };
 }
 
@@ -49,16 +49,16 @@ async function main() {
 			{
 				type: "list",
 				name: "action",
-				message: "📋 What do you want to do?",
+				message: "What do you want to do?",
 				choices: [
-					{ name: "📤 Dump the database to a SQL file", value: "dump" },
-					{ name: "📜 Export schema to a SQL file", value: "schema" },
-					{ name: "🧨 Drop all tables (DROP)", value: "drop" },
-					{ name: "🧹 Truncate all data (TRUNCATE)", value: "truncate" },
-					{ name: "📊 List tables with their size", value: "list" },
-					{ name: "📥 Import an existing SQL dump", value: "import" },
-					{ name: "🔄 Change database", value: "changeDb" },
-					{ name: "❌ Exit", value: "exit" },
+					{ name: "Dump the database to a SQL file", value: "dump" },
+					{ name: "Export schema to a SQL file", value: "schema" },
+					{ name: "Drop all tables (DROP)", value: "drop" },
+					{ name: "Truncate all data (TRUNCATE)", value: "truncate" },
+					{ name: "List tables with their size", value: "list" },
+					{ name: "Import an existing SQL dump", value: "import" },
+					{ name: "Change database", value: "changeDb" },
+					{ name: "Exit", value: "exit" },
 				],
 			},
 		]);
@@ -93,14 +93,14 @@ async function main() {
 					await importDump(db);
 					break;
 				case "changeDb":
-					console.log("🔑 Choosing a new database...");
+					console.log("Switching database...");
 					({ selectedDb, db } = await chooseDatabase());
 					break;
 				default:
 					process.exit(0);
 			}
 		} catch (err) {
-			console.error("❌ Fatal error:", err);
+			console.error("Fatal error:", err);
 			process.exit(1);
 		}
 	}

@@ -72,7 +72,7 @@ function topologicalSort(
 }
 
 async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
-	console.log(chalk.gray("🧹 Removing custom types..."));
+	console.log(chalk.gray("Removing custom types..."));
 
 	const types = await sql<{ typname: string }>`
       SELECT t.typname
@@ -90,7 +90,7 @@ async function dropAllTypes(db: Kysely<Record<string, unknown>>) {
 			.execute(db);
 	}
 
-	console.log(chalk.green("✅ Custom types removed."));
+	console.log(chalk.green("Custom types removed."));
 }
 
 export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
@@ -100,27 +100,27 @@ export async function dropAllTables(db: Kysely<Record<string, unknown>>) {
 	try {
 		const ordered = topologicalSort(tables, deps);
 
-		console.log("🧹 Removing tables in the correct order:");
+		console.log("Removing tables in the correct order:");
 		console.log(ordered.join(" → "));
 
 		for (const table of ordered) {
 			await sql.raw(`DROP TABLE IF EXISTS "${table}" CASCADE`).execute(db);
-			console.log(chalk.green(`✅ Table "${table}" removed`));
+			console.log(chalk.green(`Table "${table}" removed`));
 		}
 
-		console.log(chalk.green("🎉 All tables have been properly removed."));
+		console.log(chalk.green("All tables have been properly removed."));
 	} catch (_e: unknown) {
 		console.warn(
-			chalk.yellow("⚠️ Cycle detected: forced removal (DROP CASCADE on all)"),
+			chalk.yellow(
+				"Warning: Cycle detected, forcing removal with CASCADE on all tables",
+			),
 		);
 
 		const tableList = tables.map((t) => `"${t}"`).join(", ");
 		await sql.raw(`DROP TABLE IF EXISTS ${tableList} CASCADE`).execute(db);
 
 		console.log(
-			chalk.green(
-				"✅ All tables have been removed with CASCADE (order ignored).",
-			),
+			chalk.green("All tables have been removed with CASCADE (order ignored)."),
 		);
 	} finally {
 		await dropAllTypes(db);

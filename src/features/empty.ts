@@ -19,7 +19,7 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 	const tables = await getAllTableNames(db);
 
 	if (tables.length === 0) {
-		console.log("ℹ️ No tables found in the public schema.");
+		console.log("No tables found in the public schema.");
 		return;
 	}
 
@@ -41,24 +41,24 @@ export async function truncateTables(db: Kysely<Record<string, unknown>>) {
 		: (selectedTables as Array<string>);
 
 	if (tablesToTruncate.length === 0) {
-		console.log("ℹ️ No table selected.");
+		console.log("No table selected.");
 		return;
 	}
 
 	const tableList = tablesToTruncate.map((t) => `"${t}"`).join(", ");
 
 	try {
-		console.log("🧨 Truncating tables (with CASCADE)...");
+		console.log("Truncating tables (with CASCADE)...");
 
 		await sql
 			.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`)
 			.execute(db);
 
 		console.log(
-			`✅ Tables ${tablesToTruncate.join(", ")} successfully truncated (including cycles & FK). \n`,
+			`Tables ${tablesToTruncate.join(", ")} successfully truncated (including cycles & FK). \n`,
 		);
 	} catch (e) {
-		console.error("❌ Error during TRUNCATE:", e);
+		console.error("Error during TRUNCATE:", e);
 		process.exit(1);
 	}
 }

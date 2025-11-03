@@ -44,8 +44,6 @@ interface SequenceDefinition {
 	cycle: boolean;
 }
 
-
-
 async function getSequences(
 	db: Kysely<Record<string, unknown>>,
 ): Promise<string[]> {
@@ -350,48 +348,45 @@ export async function generateSchemaStatements(
 	db: Kysely<Record<string, unknown>>,
 	tables: string[],
 ): Promise<string[]> {
-	console.log("📦 Exporting sequences...");
+	console.log("Exporting sequences...");
 	const sequences = await getSequences(db);
 
-	console.log("📦 Exporting custom types...");
+	console.log("Exporting custom types...");
 	const enumTypes = await getEnumTypes(db);
 
-	console.log("📦 Exporting tables...");
+	console.log("Exporting tables...");
 	const createTableStatements: string[] = [];
 	for (const table of tables) {
 		try {
 			const createTableStatement = await getTableSchema(db, table);
 			createTableStatements.push(createTableStatement);
 		} catch (e) {
-			console.error(`❌ Failed to export schema for table "${table}":`, e);
+			console.error(`Failed to export schema for table "${table}":`, e);
 		}
 	}
 
-	console.log("📦 Exporting sequence ownerships...");
+	console.log("Exporting sequence ownerships...");
 	const sequenceOwnerships = await getSequenceOwnerships(db);
 
-	console.log("📦 Exporting foreign keys...");
+	console.log("Exporting foreign keys...");
 	const foreignKeyStatements: string[] = [];
 	for (const table of tables) {
 		try {
 			const fks = await getForeignKeys(db, table);
 			foreignKeyStatements.push(...fks);
 		} catch (e) {
-			console.error(
-				`❌ Failed to export foreign keys for table "${table}":`,
-				e,
-			);
+			console.error(`Failed to export foreign keys for table "${table}":`, e);
 		}
 	}
 
-	console.log("📦 Exporting indexes...");
+	console.log("Exporting indexes...");
 	const indexStatements: string[] = [];
 	for (const table of tables) {
 		try {
 			const indexes = await getIndexes(db, table);
 			indexStatements.push(...indexes);
 		} catch (e) {
-			console.error(`❌ Failed to export indexes for table "${table}":`, e);
+			console.error(`Failed to export indexes for table "${table}":`, e);
 		}
 	}
 
@@ -412,12 +407,12 @@ export async function exportSchema(
 	dbName: string,
 ) {
 	const tables = await getAllTableNames(db);
-	console.log(`📦 Found ${tables.length} tables to export schema for.`);
+	console.log(`Found ${tables.length} tables to export schema for.`);
 
 	const statements = await generateSchemaStatements(db, tables);
 
 	for (const table of tables) {
-		console.log(`✅ Exported schema for table ${table}`);
+		console.log(`Exported schema for table ${table}`);
 	}
 
 	const fullSQL = statements.join("\n\n");
@@ -426,5 +421,5 @@ export async function exportSchema(
 	mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 	writeFileSync(OUTPUT_FILE, fullSQL);
 
-	console.log(`🎉 Schema SQL generated at ${OUTPUT_FILE}`);
+	console.log(`Schema SQL generated at ${OUTPUT_FILE}`);
 }
